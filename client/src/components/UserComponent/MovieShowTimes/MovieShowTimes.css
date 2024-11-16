@@ -1,0 +1,48 @@
+.movie-show {
+    display: flex;
+    flex-direction: row; /* Stack the movie cards vertically */
+    gap: 20px;
+    padding: 20px;
+  }
+  
+  .movie-card {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between; /* Create space between name and showtimes */
+    align-items: center; /* Center the content vertically */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .movie-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+  
+  .movie-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    flex: 1; /* Allow the name to take remaining space */
+  }
+  
+  .movie-showtimes {
+    display: flex;
+    gap: 10px; /* Space between showtimes */
+    justify-content: flex-end; /* Align showtimes to the right */
+  }
+  
+  .showtime {
+    background-color: #007bff;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .showtime:hover {
+    background-color: #0056b3;
+  }
+  

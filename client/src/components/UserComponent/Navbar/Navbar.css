@@ -1,0 +1,70 @@
+/* Main navbar container */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: #fff;
+  height: 100px; /* Set height to 70px */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add shadow */
+}
+
+/* Logo styling */
+.logo img {
+  height: 30px;
+}
+
+/* Navigation links styling */
+.nav-links {
+  display: flex;
+  gap: 50px;
+}
+
+.nav-links a {
+  color: #000;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* User Info and buttons */
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  background-color: #002d6b; /* Dark blue */
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.user-icon {
+  margin-left: 8px;
+  width: 20px;
+  height: 20px;
+  background-color: #00bfff; /* Light blue */
+  border-radius: 50%;
+}
+
+/* Divider styling */
+.divider {
+  width: 1px;
+  height: 20px;
+  background-color: #ddd;
+  margin: 0 10px;
+}
+
+/* App icons styling */
+.app-icons img {
+  width: 25px;
+  height: 25px;
+  margin-left: 10px;
+  cursor: pointer;
+}

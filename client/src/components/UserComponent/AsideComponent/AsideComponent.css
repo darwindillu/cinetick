@@ -1,0 +1,65 @@
+aside {
+    background-color: #34495e; /* @night-blue */
+    display: inline-block;
+    height: 100vh;
+    position: fixed;
+    width: 20%;
+    /* Ensuring the aside does not shrink */
+    min-width: 20%;
+}
+
+header {
+    box-sizing: border-box;
+    background-color: #483D8B; /* @primary */
+    height: 80px;
+    width: 100%; /* This should already be 100% */
+    position: relative; /* Ensure position context */
+}
+
+header > div {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+header p {
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 13px;
+    color: white;
+    margin-left: 10px;
+    text-transform: uppercase;
+}
+
+.sideNavigation {
+    font-size: 14px;
+}
+
+.sideNavigation span {
+    color: #92a1a2; /* @grey */
+    display: block;
+    padding: 15px 25px;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.sideNavigation i.fa {
+    color: #92a1a2; /* @grey */
+    font-size: 20px;
+    margin-right: 20px;
+}
+
+.sideNavigation li.active,
+.sideNavigation li:hover {
+    background-color: #87CEEB; /* @night-blue-dark */
+    color: white;
+}
+
+.sideNavigation li.active span,
+.sideNavigation li:hover span {
+    color: white;
+}
+
+.sideNavigation ul {
+    justify-content: space-between;
+}

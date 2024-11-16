@@ -1,0 +1,66 @@
+.date-filter-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  .date-buttons {
+    display: flex;
+    gap: 7px;
+  }
+  
+  .date-button {
+    background-color: #f5f5f5;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    width: 60px;
+  }
+  
+  .date-button.active,
+  .date-button:hover {
+    background-color: #002d6b;
+    color: white;
+  }
+  
+  .date-button .month {
+    font-size: 12px;
+    color: #666;
+  }
+  
+  .date-button .date {
+    font-size: 16px;
+    font-weight: bold;
+  }
+  
+  .date-button .day {
+    font-size: 12px;
+    color: #666;
+  }
+  
+  .filter-search input {
+    margin-left: 50px;
+    height: 50px;
+    width: 200%;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+    outline: none;
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .filter-search input:focus {
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+    border-color: #002d6b;
+  }
+  
+  .filter-search input::placeholder {
+    text-align: center;
+    color: black;
+    margin-left: 0;
+    font-size: 16px;
+  }
+  

@@ -1,0 +1,44 @@
+.container {
+    box-sizing: border-box;
+    background-color: #483D8B; 
+    height: 80px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px; /* Added padding for better spacing */
+}
+
+.main {
+    top: 0%;
+    transform: translateY(-37%);
+    flex-grow: 1; /* Allows the main to take available space */
+}
+
+.main h1 {
+    display: flex;
+    font-size: 1.2rem; /* Use relative units for better scaling */
+    color: white;
+    margin: 0 0 0 80px; /* Reset margins for better control */
+    text-transform: uppercase;
+}
+
+/* Media Queries for responsiveness */
+@media (max-width: 768px) {
+    .main h1 {
+        font-size: 1rem; /* Reduce font size for smaller screens */
+        margin-left: 10px; /* Adjust left margin */
+        margin-top: 0; /* Remove top margin */
+        justify-content: center; /* Center the text */
+    }
+
+    .container {
+        height: auto; /* Allow height to adjust to content */
+        padding: 10px; /* Add padding for mobile */
+    }
+}
+
+@media (max-width: 480px) {
+    .main h1 {
+        font-size: 0.8rem; /* Further reduce font size for very small screens */
+        text-align: center; /* Center text for very small screens */
+    }
+}

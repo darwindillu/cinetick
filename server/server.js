@@ -9,13 +9,14 @@ const userRouter = require('./Routes/userRouter')
 const app = express()
 const {Server} = require('socket.io')
 const http = require('http')
-
+const { OpenAI } = require("openai");
 const Seat = require("./model/seatSchema");
 const userCollection = require("./model/UserModel");
 const ShowModel = require("./model/ShowModel");
 const theatreCollection = require('./model/TheatreModel');
 const bookingCollection = require('./model/BookingSchema');
 const showCollection = require('./model/ShowModel');
+const movieCollection = require('./model/MovieModel');
 
 
 // Replace with your Razorpay credentials
@@ -44,6 +45,32 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/admin',AdminRouter)
 app.use('/api/user',userRouter)
 
+const openai = new OpenAI();
+
+// Chat endpoint
+app.post('/chat', async (req, res) => {
+    try {
+        const { message } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                {"role": "user", "content": "write a haiku about ai"}
+            ]
+        });
+
+        const reply = response.data.choices[0].message.content;
+        res.status(200).json({ reply });
+    } catch (error) {
+        console.error('Error in ChatGPT integration:', error);
+        res.status(500).json({ error: 'Failed to generate response' });
+    }
+});
+
 let userSocketMap = {};
 
 io.on('connection', (socket) => {
@@ -53,27 +80,28 @@ io.on('connection', (socket) => {
         console.log(email);
         
         userSocketMap[email] = socket.id;
-        // await userCollection.findByIdAndUpdate();
         console.log(userSocketMap,'This is user socket map');
     });
 
-    socket.on('bookSeats', async({data,seats,response})=>{
+    socket.on('bookSeats', async({data,seats,response,selectedDate})=>{
         try {
         
-            console.log(data,seats,response, 'This is data for booking');
+            console.log(data,seats,response,JSON.parse(selectedDate), 'This is data for booking');
         
             // Extracting individual fields from data
             const { email, movieId, theatreName } = data;
         
             // Fetch the showId and theatreId
-            const theatreId = await theatreCollection.findOne({theatreName:theatreName},{_id:1});
-            // if (!theatreId) {
-            //   return res.status(404).json({ success: false, message: 'Theatre not found' });
-            // }
+            const theatreId = await theatreCollection.findOne({theatreName:theatreName});
+        
             const showId = await showCollection.findOne({movieId:movieId,theatreId:theatreId},{_id:1});
-            // if (!showId) {
-            //   return res.status(404).json({ success: false, message: 'Show not found for the movie' });
-            // }
+
+            const movie = await movieCollection.findOne({_id:movieId})
+
+            console.log(movie,'This is movie after booking');
+
+            const date = JSON.parse(selectedDate)
+            
         
       
             if(showId && theatreId){
@@ -81,35 +109,48 @@ io.on('connection', (socket) => {
               
             }
         
-            const seatDetails = {
-                seatNumber:seats,
-            }
+            const seatNumber = seats
+
         
             // Calculate the total amount
             const totalAmount = seats.length * 150;
         
             // Ensure the transactionId is valid
             const transactionId = response.razorpay_payment_id;
-            // if (!transactionId) {
-            //   return res.status(400).json({ success: false, message: 'Invalid payment response' });
-            // }
+            
         
             // Create the booking document
             const newBooking = new bookingCollection({
               email,
               showId,
               theatreId,
-              seats: seatDetails,
+              seatNumber: seatNumber,
               totalAmount,
               transactionId,
               bookingStatus: 'Completed', 
               paymentStatus: 'Paid', 
-              time:data.show
+              time:data.show,
+              theatreName:theatreName,
+              theatreLocation:theatreId.location,
+              theatreCity:theatreId.city,
+              theatreMobile:theatreId.mobile,
+              movieName:movie.movieName,
+              movieImageUrl:movie.imageUrl,
+              movieCertificate:movie.certificateType,
+              movieDuration:movie.duration,
+              bookingDay:date.day,
+              bookingDate:date.date,
+              bookingMonth:date.month
       
             });
+
+            console.log(newBooking,'This is the overall data');
+            
         
             // Save the booking
             await newBooking.save();
+
+            
 
             for (const email in userSocketMap) {
                 const socketId = userSocketMap[email];
@@ -117,26 +158,23 @@ io.on('connection', (socket) => {
                 io.to(socketId).emit('bookingConfirm', { message: 'Booking Confirmed' });
             }
         
-            // Respond with the booking details
-            // res.status(200).json({
-            //   success: true,
-            //   message: 'Booking successful!',
-            //   booking: newBooking,
-            // });
-        
           } catch (error) {
             console.error(error);
-            // res.status(500).json({
-            //   success: false,
-            //   message: 'Failed to book the ticket. Please try again later.',
-            //   error: error.message,
-            // });
+            
           }
         
     })
     socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.id);
+        console.log('User disconnected:', socket.id);
+        for (const email in userSocketMap) {
+            if (userSocketMap[email] === socket.id) {
+                delete userSocketMap[email];
+                console.log(`Removed ${email} from userSocketMap`);
+                break;
+            }
+        }
     });
+    
   });
 
   
@@ -160,60 +198,6 @@ app.post('/payment', async (req, res) => {
       res.status(500).json({ success: false, error: error.message });
     }
   });
-
-// Route to get all available seats for a show
-// app.get("/api/seats/:showId/:theatreId", async (req, res) => {
-//     try {
-//       const { showId, theatreId } = req.params;
-//       const seats = await Seat.find({ showId, theatreId });
-  
-//       res.json(seats);
-//     } catch (err) {
-//       res.status(500).json({ message: err.message });
-//     }
-//   });
-  
-  // Route to book selected seats
-//   app.post("/api/bookSeats", async (req, res) => {
-//     const { userId, showId, theatreId, selectedSeats } = req.body;
-  
-//     if (!userId || !showId || !theatreId || !selectedSeats || selectedSeats.length === 0) {
-//       return res.status(400).json({ message: "All fields are required" });
-//     }
-  
-//     try {
-//       // Find the user
-//       const user = await UserModal.findById(userId);
-//       if (!user) {
-//         return res.status(404).json({ message: "User not found" });
-//       }
-  
-//       // Check if all selected seats are available
-//       const seats = await Seat.find({ showId, theatreId, seatNumber: { $in: selectedSeats } });
-//       const unavailableSeats = seats.filter(seat => seat.isBooked);
-  
-//       if (unavailableSeats.length > 0) {
-//         return res.status(400).json({
-//           message: `Seats ${unavailableSeats.map(seat => seat.seatNumber).join(", ")} are already booked.`,
-//         });
-//       }
-  
-//       // Mark selected seats as booked
-//       await Seat.updateMany(
-//         { showId, theatreId, seatNumber: { $in: selectedSeats } },
-//         { $set: { isBooked: true } }
-//       );
-  
-//       // You can also save booking details in a separate booking collection (if needed)
-  
-//       res.status(200).json({ message: "Seats booked successfully" });
-//     } catch (err) {
-//       res.status(500).json({ message: err.message });
-//     }
-//   });
-
-
-//   app.get("/:showId/:theatreId", async (req, res) => {
 //     const { showId, theatreId } = req.params;
   
 //     try {
@@ -305,9 +289,11 @@ app.post('/payment', async (req, res) => {
 
 app.get('/seats/:show/:theatreName/:Id', async (req, res) => {
     try {
+        console.log(req.params,'This is the params ');
+        
       const { show, theatreName, Id } = req.params;
   
-  
+      
       // Find the theatre ID
       const theatreId = await theatreCollection.findOne({ theatreName: theatreName }, { _id: 1 });
       if (!theatreId) {
@@ -331,7 +317,7 @@ app.get('/seats/:show/:theatreName/:Id', async (req, res) => {
       
   
       // Collect all booked seat numbers
-      const bookedSeats = bookings.flatMap(booking => booking.seats.seatNumber);
+      const bookedSeats = bookings.flatMap(booking => booking.seatNumber);
 
       
   

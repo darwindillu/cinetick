@@ -1,0 +1,21 @@
+.after-booking {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 90%;
+    height: 90vh; /* 90% of the viewport height */
+    margin: 0 auto; /* Center horizontally */
+    text-align: center; /* Optional: center align text */
+  }
+
+  .booking-main {
+    width: 60%;
+    height: 300px;
+    padding: 100px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Shadow effect */
+    background-color:#002d6b;
+    color: white;
+}
+
+  

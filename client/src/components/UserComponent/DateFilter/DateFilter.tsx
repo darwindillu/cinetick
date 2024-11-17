@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import './DateFilter.css';
 
-const DateFilter = () => {
+interface DateFilterProps {
+    handleDateSelect: (date: any) => void; // Ensure the function expects a date and returns nothing (void)
+  }
+
+const DateFilter:React.FC<DateFilterProps> = ({handleDateSelect}:any) => {
 
   const [nextTenDays, setNextTenDays] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<any>(null);
@@ -15,6 +19,7 @@ const DateFilter = () => {
   const handleSearchText = (e:React.ChangeEvent<HTMLInputElement>) =>{
     setSearchedText(e.target.value)
   }
+
 
   const generateNextTenDays = () => {
     const today = new Date();
@@ -33,6 +38,9 @@ const DateFilter = () => {
 
   const selectDate = (day:any) => {
     setSelectedDate(day);
+    console.log(day,'This is selected date');
+    
+    handleDateSelect(day)
     console.log('Selected date:', day);
   };
 
@@ -47,7 +55,7 @@ const DateFilter = () => {
             onClick={() => selectDate(day)}
           >
             <div className="month">{day.month}</div>
-            <div className="date">{day.date}</div>
+            <div className="date" style={{color:'black'}}>{day.date}</div>
             <div className="day">{day.day}</div>
           </button>
         ))}

@@ -117,6 +117,8 @@ const getShowTimes = async (req, res) => {
         const { Id: movieId } = req.body; // Extract movieId from request body
         console.log({ movieId }, 'This is movieId');
 
+        const movieName = await movieCollection.findOne({_id:movieId},{movieName:1})
+
         // Fetch all show times for the given movie ID
         const showTimes = await showCollection.find({ movieId });
         console.log(showTimes, 'this is shows');
@@ -150,7 +152,7 @@ const getShowTimes = async (req, res) => {
         }));
 
         console.log(result, 'This is the final result');
-        res.status(200).json({ showTimes: result });
+        res.status(200).json({ showTimes: result, movieName:movieName });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
@@ -236,4 +238,89 @@ const bookTicket = async (req, res) => {
   };
   
 
-module.exports = {getMovies,getTheatres,getSpecificTheatre,getSpecificMovie,getShowTimes,bookTicket,UserLogin,UserVerifyOtp}
+  const GetMoviesAndTheatre = async(req,res) =>{
+
+    try {
+        
+        const movies = await movieCollection.find({})
+
+        const theatres = await theatreCollection.find({})
+
+        if(movies && theatres){
+            res.status(200).json({movies:movies,theatres:theatres})
+        }
+    } catch (error) {
+        console.log(error);
+        
+    }
+  }
+
+  const searchedMovies = async(req,res) =>{
+
+    try {
+        
+        const data = req.body
+        console.log(data,'This is searchedText');
+
+        const movies = await movieCollection.find({
+            movieName: { $regex: data.debouncedText, $options: "i" } // Case-insensitive regex search
+          });
+
+          console.log(movies,'This is movies after search');
+
+          if(movies.length > 0){
+            res.status(200).json({searchedMovies:movies})
+          }else{
+            res.status(404).json({message:'No movies found for the result'})
+          }
+          
+        
+    } catch (error) {
+        console.log(error);
+        
+    }
+  }
+
+  const getSpecificTheaterMovies = async(req,res) =>{
+
+    try {
+        
+        const {theatreId} = req.body
+        console.log(theatreId,'This is specific theatre Id');
+          
+        const movieId = await showCollection.find({theatreId:theatreId},{movieId:1})
+        console.log(movieId,'This is movie Id');
+
+        const movieIds = movieId.map((movie)=> movie.movieId)
+
+        const movies = await movieCollection.find({_id:{$in:movieIds}})
+
+        console.log(movies, 'this is movies');
+
+        res.status(200).json({movies:movies})
+        
+        
+    } catch (error) {
+        console.log(error);
+        
+    }
+  }
+
+  const fetchOrders = async (req, res) => {
+    try {
+        const { email } = req.body;
+        console.log(email, 'This is orders email');
+
+        const bookingData = await bookingCollection.find({ email: email });
+
+        
+
+        res.status(200).json({ orders: bookingData });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Server error occurred' });
+    }
+};
+
+
+module.exports = {getMovies,getTheatres,getSpecificTheatre,getSpecificMovie,getShowTimes,bookTicket,UserLogin,UserVerifyOtp,GetMoviesAndTheatre,searchedMovies,getSpecificTheaterMovies,fetchOrders}

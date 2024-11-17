@@ -6,13 +6,14 @@ import MovieInfo from "../components/UserComponent/MovieInfo/MovieInfo";
 import NavBar from "../components/UserComponent/Navbar/Navbar";
 import DateFilter from "../components/UserComponent/DateFilter/DateFilter";
 import MovieShowtimes from "../components/UserComponent/MovieShowTimes/MovieShowTimes";
+import Footer from "../components/UserComponent/Footer/Footer";
 
 const SpecificMovies = () =>{
 
     const location = useLocation()
     const [movies,setMovies] = useState<any>({})
     const [movieId,setMovieId] = useState<string> ('')
-    
+    const [selectedDate,setSelectedDate] = useState<any>()
 
     useEffect(()=>{
         const queryParams = new URLSearchParams(location.search)
@@ -41,6 +42,13 @@ const SpecificMovies = () =>{
         }
         
     },[location.search])
+    
+    function handleDateSelect(date: any): void {
+        setSelectedDate(date)
+        console.log(date,'This is selected date');
+        
+    }
+
     return (
         <>
         <NavBar />
@@ -53,12 +61,15 @@ const SpecificMovies = () =>{
         }
         </div>
         <div style={{padding:60,marginLeft:100}}>
-            <DateFilter />
+            <DateFilter handleDateSelect = {handleDateSelect}/>
         </div>
         <div>
         <h4 style={{marginLeft:100,marginBottom:30}}>Now Playing</h4>
 
-            { movieId && <MovieShowtimes Id={movieId} />}
+            { movieId  && <MovieShowtimes Id={movieId} selectedDate={selectedDate} />}
+        </div>
+        <div>
+            <Footer />
         </div>
         </>
     )

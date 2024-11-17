@@ -102,7 +102,7 @@ const UserLoginPage = () => {
         backgroundColor: "#483D8B",
       }}
     >
-      <div className="container" style={{ maxWidth: "600px", minHeight: "400px"}}>
+      <div className="container" style={{ maxWidth: "400px", minHeight: "400px"}}>
         <div className="card p-5">
           <h3 className="text-start mb-5"> Please Login Here ...</h3>
           <form onSubmit={handleEmailSubmit}>

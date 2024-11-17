@@ -1,39 +1,47 @@
-.movie-show {
+.showtimes-container {
     display: flex;
-    flex-direction: row; /* Stack the movie cards vertically */
+    flex-direction: column; /* Stack the movie cards vertically */
     gap: 20px;
     padding: 20px;
   }
   
-  .movie-card {
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    display: flex;
-    justify-content: space-between; /* Create space between name and showtimes */
-    align-items: center; /* Center the content vertically */
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  .showtime-details {
+    display: flex; /* Flex in a row */
+    justify-content: space-between; /* Space between theatre name and showtimes */
+    align-items: center; /* Center content vertically */
+    width: 100%; /* Ensure it takes full width */
   }
   
-  .movie-card:hover {
+  .showtime-card {
+    background-color: rgb(245, 241, 241);
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(231, 87, 87, 0.1);
+    padding: 20px;
+    display: flex;
+    flex-direction: column; /* Stack showtimes vertically */
+    justify-content: center; /* Center content vertically */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-left: 60px;
+  }
+  
+  .showtime-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   }
   
-  .movie-name {
+  .theatre-name {
     font-size: 1.2rem;
     font-weight: bold;
-    flex: 1; /* Allow the name to take remaining space */
+    margin-left: 50px;
   }
   
-  .movie-showtimes {
-    display: flex;
+  .showtime-list {
+    display: flex; /* Align the showtimes horizontally */
     gap: 10px; /* Space between showtimes */
-    justify-content: flex-end; /* Align showtimes to the right */
+    justify-content: flex-end; /* Align showtimes to the left */
   }
   
-  .showtime {
+  .showtime-button {
     background-color: #007bff;
     color: white;
     padding: 8px 16px;
@@ -42,7 +50,7 @@
     transition: background-color 0.3s ease;
   }
   
-  .showtime:hover {
+  .showtime-button:hover {
     background-color: #0056b3;
   }
   

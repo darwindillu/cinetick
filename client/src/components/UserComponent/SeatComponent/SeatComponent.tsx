@@ -10,133 +10,99 @@ import { io } from 'socket.io-client';
 const socket = io(`${baseUrl}`);
 
 const Seats = () => {
-  const pricePerSeat = 150; // Price per seat
+  const pricePerSeat = 150; 
   const location = useLocation();
-  const { show, theatreName, Id } = location.state || {};
-  console.log(4545,show, theatreName, Id );
+  const { show, theatreName, Id,movieName,dateData } = location.state || {};
+  
+  const [seats, setSeats] = useState<any[]>([]); 
+  const [bookedSeats, setBookedSeats] = useState<number[]>([]); 
+  const [selectedSeats, setSelectedSeats] = useState<number[]>([]); 
+  const [selectedDate,setSelectedDate] = useState<any>()
   
 
-  // States
-  const [seats, setSeats] = useState<any[]>([]); // To store seat data fetched from the backend
-  const [bookedSeats, setBookedSeats] = useState<number[]>([]); // Booked seats
-  const [selectedSeats, setSelectedSeats] = useState<number[]>([]); // Selected seats
-
-//   // Fetch seat data from the backend
-//   useEffect(() => {
-//     // Replace with your API endpoint that returns seat data
-//     axios
-//       .get(`${baseUrl}seats/${show}/${theatreName}/${Id}`)
-//       .then((response) => {
-//         const seatData = response.data; // Assuming the response returns seat data in a suitable structure
-//         console.log('seatData',seatData)
-//         setSeats(seatData);
-//       })
-//       .catch((error) => {
-//         console.error("Error fetching seat data:", error);
-//       });
-//   }, [show, theatreName]);
-
   useEffect(() => {
 
-    
-    axios
-      .get(`${baseUrl}seats/${show}/${theatreName}/${Id}`)
-      .then((response) => {
-        const seatData = response.data;
-        console.log('seatData:', seatData);  // Log the response data for debugging
-        // const transformedSeatData = seatData.map((row:any) => {
-        //     if (!Array.isArray(row)) {
-        //       return []; // Return an empty array if the row is not an array
-        //     }
-        //     return row; // Otherwise, return the row as-is
-        //   });
-        // const filteredSeats = seatData.filter(
-        //     (seat: any) => seat.movieId === Id
-        //   );
+    console.log(dateData,'This is props of selectedDate');
 
-          console.log('filteredSeats', seatData);
-          
+    if(dateData){
+        setSelectedDate(JSON.stringify(dateData))
+    }
+
+        axios
+          .get(`${baseUrl}seats/${show}/${theatreName}/${Id}`)
+          .then((response) => {
+            const seatData = response.data;
+              console.log('filteredSeats', seatData);
+              
+        
+              // Group seats into rows
+              const seatsPerRow = 10; 
+              const groupedSeats = [];
+              for (let i = 0; i < seatData.length; i += seatsPerRow) {
+                groupedSeats.push(seatData.slice(i, i + seatsPerRow));
+              }
+        
+              setSeats(groupedSeats);
+        
+              // Pre-select booked seats
+              const booked = seatData
+                .filter((seat: any) => seat.isBooked)
+                .map((seat: any) => seat.seatNumber);
+              setBookedSeats(booked);
+          })
+          .catch((error) => {
+            console.error("Error fetching seat data:", error);
+          });
     
-          // Group seats into rows
-          const seatsPerRow = 10; // Define the number of seats in a row
-          const groupedSeats = [];
-          for (let i = 0; i < seatData.length; i += seatsPerRow) {
-            groupedSeats.push(seatData.slice(i, i + seatsPerRow));
-          }
     
-          setSeats(groupedSeats);
-    
-          // Pre-select booked seats
-          const booked = seatData
-            .filter((seat: any) => seat.isBooked)
-            .map((seat: any) => seat.seatNumber);
-          setBookedSeats(booked);
-      })
-      .catch((error) => {
-        console.error("Error fetching seat data:", error);
-      });
-  }, [show, theatreName]);
+  }, []);
 
   useEffect(() => {
-
-    console.log(socket,'socket useEffect');
+    console.log(socket, 'socket useEffect');
     
     socket.on('connect', () => {
-        // Emit user ID to server
-
-        socket.emit('setUserId', { email: localStorage.getItem('userEmail') });
-        // Set socket ID in the Redux store
-
-        socket.on('bookingConfirm',(response)=>{
-            console.log(response,'This is booking after response');
-            
-            if(response.message === 'Booking Confirmed'){
-                axios
-                .get(`${baseUrl}seats/${show}/${theatreName}/${Id}`)
-                .then((response) => {
-                  const seatData = response.data;
-                  console.log('seatData:', seatData);  // Log the response data for debugging
-                  // const transformedSeatData = seatData.map((row:any) => {
-                  //     if (!Array.isArray(row)) {
-                  //       return []; // Return an empty array if the row is not an array
-                  //     }
-                  //     return row; // Otherwise, return the row as-is
-                  //   });
-                  // const filteredSeats = seatData.filter(
-                  //     (seat: any) => seat.movieId === Id
-                  //   );
-          
-                    console.log('filteredSeats', seatData);
-                    
-              
-                    // Group seats into rows
-                    const seatsPerRow = 10; // Define the number of seats in a row
-                    const groupedSeats = [];
-                    for (let i = 0; i < seatData.length; i += seatsPerRow) {
-                      groupedSeats.push(seatData.slice(i, i + seatsPerRow));
-                    }
-              
-                    setSeats(groupedSeats);
-              
-                    // Pre-select booked seats
-                    const booked = seatData
-                      .filter((seat: any) => seat.isBooked)
-                      .map((seat: any) => seat.seatNumber);
-                    setBookedSeats(booked);
-                })
-                .catch((error) => {
-                  console.error("Error fetching seat data:", error);
-                });
-            }
-        })
+      socket.emit('setUserId', { email: localStorage.getItem('userEmail') });
+  
+      // Handle booking confirmation
+      socket.on('bookingConfirm', (response) => {
+        console.log(response, 'This is booking after response');
+  
+        if (response.message === 'Booking Confirmed') {
+          // Fetch the updated seat data
+          axios
+            .get(`${baseUrl}seats/${show}/${theatreName}/${Id}`)
+            .then((response) => {
+              const seatData = response.data;
+              console.log('Updated seatData:', seatData);
+  
+              // Update the seats and bookedSeats state
+              const seatsPerRow = 10;
+              const groupedSeats = [];
+              for (let i = 0; i < seatData.length; i += seatsPerRow) {
+                groupedSeats.push(seatData.slice(i, i + seatsPerRow));
+              }
+  
+              setSeats(groupedSeats);
+  
+              const booked = seatData
+                .filter((seat:any) => seat.isBooked)
+                .map((seat:any) => seat.seatNumber);
+  
+              setBookedSeats(booked);
+            })
+            .catch((error) => {
+              console.error('Error fetching seat data after booking:', error);
+            });
+        }
       });
-
-    
+    });
   
     return () => {
-      socket.off('seatBooked');
+      // Cleanup socket event listeners
+      socket.off('bookingConfirm');
     };
   }, []);
+  
   
   
   
@@ -152,12 +118,6 @@ const Seats = () => {
     }
   };
 
-  // Book selected seats
-  const bookSeats = () => {
-    setBookedSeats((prev) => [...prev, ...selectedSeats]);
-    setSelectedSeats([]);
-    alert("Seats successfully booked!");
-  };
 
   const data = {
     email:localStorage.getItem('userEmail'),
@@ -199,8 +159,22 @@ const Seats = () => {
         </div>
       </div>
       <div className="right-section">
-        <div className="details-box">
-          <h3>Selected Seats</h3>
+      <div className="details-box">
+          <h3>Show Details</h3>
+          <p>
+            Theatre Name :  <strong>{theatreName}</strong>
+          </p>
+          <p>
+            Show Time :<strong>{show} </strong>
+          </p>
+          <p>
+          Movie Name: <strong> {movieName} </strong>
+          </p>
+          
+          
+        </div>
+        <div className="details-box" style={{marginTop:-70}}>
+          <h3>Seat Details</h3>
           <p>
             <strong>Seats: </strong>
             {selectedSeats.join(", ")}
@@ -213,7 +187,7 @@ const Seats = () => {
           <strong>Total Amount: </strong>₹{totalAmount}
           </p>
           {
-            selectedSeats.length && <PaymentPage data={data} seats={selectedSeats} socket={socket}/>
+            selectedSeats.length ? (<PaymentPage data={data} seats={selectedSeats} selectedDate={selectedDate} socket={socket}/>)  : ('')
           }
           
         </div>

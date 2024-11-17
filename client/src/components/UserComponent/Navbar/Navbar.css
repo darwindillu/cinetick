@@ -5,26 +5,35 @@
   justify-content: space-between;
   padding: 10px 20px;
   background-color: #fff;
-  height: 100px; /* Set height to 70px */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add shadow */
+  height: 100px; /* Adjusted height */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* Logo styling */
 .logo img {
-  height: 30px;
+  height: 80px;
+  object-fit: contain;
+  margin-left: 50px;
 }
 
 /* Navigation links styling */
 .nav-links {
   display: flex;
-  gap: 50px;
+  align-items: center;
+  gap: 30px; /* Reduced gap for better spacing */
 }
 
-.nav-links a {
+.nav-links p {
   color: #000;
   text-decoration: none;
   font-weight: bold;
   font-size: 16px;
+  position: relative; /* For hover effects */
+  margin-top: 10px;
+}
+
+.nav-links p:hover {
+  color: #002d6b; /* Dark blue on hover */
 }
 
 /* User Info and buttons */
@@ -39,10 +48,15 @@
   background-color: #002d6b; /* Dark blue */
   color: #fff;
   border: none;
-  padding: 8px 12px;
+  padding: 8px 16px; /* Adjusted padding for better spacing */
   border-radius: 20px;
   font-size: 14px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.user-button:hover {
+  background-color: #005bb5; /* Slightly lighter blue on hover */
 }
 
 .user-icon {
@@ -67,4 +81,97 @@
   height: 25px;
   margin-left: 10px;
   cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.app-icons img:hover {
+  transform: scale(1.1); /* Slight zoom on hover */
+}
+
+/* Dropdown Modal */
+.hover-modal {
+  position: absolute;
+  top: 100%; /* Aligns below the navigation link */
+  left: 0;
+  width: 800px; /* Set a fixed width for consistent layout */
+  height: 800px;
+  background-color: #f8f8f8;
+  /* box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); */
+  padding: 10px;
+  z-index: 1000;
+}
+
+/* Modal content styling */
+.modal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Movies and Theatres styling */
+.movie,
+.theatre {
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100px;
+  padding: 8px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.movie:hover,
+.theatre:hover {
+  background-color: #f0f0f0; /* Light gray on hover */
+}
+
+.movie-images {
+  width: 20%;
+  height: 90%;  
+  border-radius: 4px;
+  object-fit:cover;
+}
+
+.theatre-image{
+
+  width: 100px;
+}
+
+.movie-info,
+.theatre-info {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+}
+
+.movie-title {
+  font-weight: bolder;
+  font-size: 16px;
+  color: #333;
+}
+
+.theatre-title {
+  font-weight: bolder;
+  font-size: 16px;
+  color: #333;
+  width: 200px;
+}
+
+.movie-languages
+ {
+  font-size: 12px;
+  color: #777;
+}
+
+.theatre-location{
+  margin-left: 100px;
+}
+
+/* Navigation item position for dropdown */
+.nav-item {
+  position: relative;
 }

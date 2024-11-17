@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import baseUrl from "../../../utils/Url";
 import { Socket } from "socket.io-client";
+import { useNavigate } from "react-router-dom";
 
 interface RazorpayResponse {
   razorpay_payment_id: string;
@@ -34,14 +35,16 @@ interface PaymentPageProps {
       theatreName: string;
     };
     seats: number[]; // Array of selected seat numbers
-    socket:Socket
+    socket:Socket,
+    selectedDate:any
   }
 
-const PaymentPage: React.FC<PaymentPageProps> = ({data,seats,socket}:any) => {
+const PaymentPage: React.FC<PaymentPageProps> = ({data,seats,socket,selectedDate}:any) => {
 
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate()
 
   console.log(data,seats,'This is data props');
 
@@ -82,8 +85,8 @@ const PaymentPage: React.FC<PaymentPageProps> = ({data,seats,socket}:any) => {
             
         //   })
 
-          socket.emit('bookSeats',({data,seats,response}))
-
+          socket.emit('bookSeats',({data,seats,response,selectedDate}))
+           navigate('/success')
         },
         prefill: {
           name: "John Doe",
@@ -107,9 +110,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({data,seats,socket}:any) => {
 
   return (
     <div>
-      {isLoading && <p>Loading payment details...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <button onClick={handlePayment} disabled={isLoading}>
+      <button style={{backgroundColor:'white',color:'black',marginLeft:120}} onClick={handlePayment} disabled={isLoading}>
         Pay Now
       </button>
     </div>

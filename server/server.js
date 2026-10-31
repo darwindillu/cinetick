@@ -1,5 +1,6 @@
 const express = require('express')
 const Razorpay = require('razorpay');
+const crypto = require('crypto');
 require('dotenv').config()
 const cors = require('cors')
 const utils = require('./utils/mongodb')
@@ -19,17 +20,32 @@ const showCollection = require('./model/ShowModel');
 const movieCollection = require('./model/MovieModel');
 
 
-// Replace with your Razorpay credentials
-const razorpay = new Razorpay({
-    key_id: 'rzp_test_g9bqvvA6stff0B',
-    key_secret: 'r8bckrOt5GXI7G0NwvKILfCi',
-});
+const SEAT_PRICE = 150 // INR per seat
+
+// Null without keys, so the rest of the app still runs; payment requests then return 503
+const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+    ? new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+    : null;
+
+// Razorpay signs order_id|payment_id with our key secret; a match proves the payment is genuine
+const isValidPaymentSignature = ({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) => {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return false
+    const expected = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex')
+    return expected.length === razorpay_signature.length &&
+        crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(razorpay_signature))
+}
 
 const server = http.createServer(app)
 
 const io = new Server(server, {
     cors: {
-      origin: 'http://localhost:3000', 
+      origin: process.env.CLIENT_URL || 'http://localhost:3000',
       methods: ['GET', 'POST'],
     },
   });
@@ -45,28 +61,64 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/admin',AdminRouter)
 app.use('/api/user',userRouter)
 
-const openai = new OpenAI();
+// Created on first use so the server still starts when OPENAI_API_KEY is not set
+let openai = null;
+const getOpenAI = () => {
+    if (!process.env.OPENAI_API_KEY) return null;
+    if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    return openai;
+};
 
-// Chat endpoint
+const MAX_CHAT_HISTORY = 10;
+
+// AI assistant: answers questions and recommends movies from what is currently showing
 app.post('/chat', async (req, res) => {
     try {
-        const { message } = req.body;
+        const { message, history = [] } = req.body;
 
-        if (!message) {
+        if (!message || typeof message !== 'string' || !message.trim()) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        const completion = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+        const client = getOpenAI();
+        if (!client) {
+            return res.status(503).json({ error: 'The assistant is not configured' });
+        }
+
+        const movies = await movieCollection
+            .find({}, { movieName: 1, genre: 1, languages: 1, rating: 1, certificateType: 1, duration: 1, description: 1 })
+            .lean();
+
+        const catalogue = movies.map(m =>
+            `- ${m.movieName} | ${(m.genre || []).join(', ')} | ${(m.languages || []).join(', ')} | ` +
+            `rating ${m.rating ?? 'n/a'} | ${m.certificateType || 'n/a'} | ${m.duration || 'n/a'} | ${m.description || ''}`
+        ).join('\n');
+
+        const pastMessages = (Array.isArray(history) ? history : [])
+            .filter(h => (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string')
+            .slice(-MAX_CHAT_HISTORY);
+
+        const completion = await client.chat.completions.create({
+            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
             messages: [
-                {"role": "user", "content": "write a haiku about ai"}
+                {
+                    role: 'system',
+                    content:
+                        'You are the CineTick assistant for a movie ticket booking site. ' +
+                        'Help users choose a movie and answer questions about booking. ' +
+                        'Only recommend movies from this list of movies now showing:\n' +
+                        (catalogue || '(no movies are listed right now)') +
+                        '\nKeep answers short and friendly. Ticket price is ₹' + SEAT_PRICE + ' per seat.'
+                },
+                ...pastMessages,
+                { role: 'user', content: message.trim() }
             ]
         });
 
-        const reply = response.data.choices[0].message.content;
+        const reply = completion.choices[0].message.content;
         res.status(200).json({ reply });
     } catch (error) {
-        console.error('Error in ChatGPT integration:', error);
+        console.error('Error in OpenAI integration:', error);
         res.status(500).json({ error: 'Failed to generate response' });
     }
 });
@@ -85,7 +137,18 @@ io.on('connection', (socket) => {
 
     socket.on('bookSeats', async({data,seats,response,selectedDate})=>{
         try {
-        
+            if (!razorpay || !isValidPaymentSignature(response || {})) {
+                socket.emit('bookingFailed', { message: 'Payment could not be verified' });
+                return;
+            }
+
+            // The paid amount must match the seats being booked
+            const order = await razorpay.orders.fetch(response.razorpay_order_id);
+            if (!Array.isArray(seats) || !seats.length || order.amount !== seats.length * SEAT_PRICE * 100) {
+                socket.emit('bookingFailed', { message: 'Payment amount does not match the selected seats' });
+                return;
+            }
+
             console.log(data,seats,response,JSON.parse(selectedDate), 'This is data for booking');
         
             // Extracting individual fields from data
@@ -111,9 +174,20 @@ io.on('connection', (socket) => {
         
             const seatNumber = seats
 
-        
+            if (!showId || !theatreId || !movie) {
+                socket.emit('bookingFailed', { message: 'Show not found' });
+                return;
+            }
+
+            // Reject seats someone else booked while this user was paying
+            const clash = await bookingCollection.findOne({ showId, theatreId, time: data.show, seatNumber: { $in: seats } });
+            if (clash) {
+                socket.emit('bookingFailed', { message: 'Some of these seats were just booked by someone else' });
+                return;
+            }
+
             // Calculate the total amount
-            const totalAmount = seats.length * 150;
+            const totalAmount = seats.length * SEAT_PRICE;
         
             // Ensure the transactionId is valid
             const transactionId = response.razorpay_payment_id;
@@ -152,15 +226,14 @@ io.on('connection', (socket) => {
 
             
 
-            for (const email in userSocketMap) {
-                const socketId = userSocketMap[email];
-                console.log(socketId, 'This is socketId loop');
-                io.to(socketId).emit('bookingConfirm', { message: 'Booking Confirmed' });
-            }
-        
+            socket.emit('bookingSuccess', { message: 'Booking Confirmed' });
+
+            // Everyone viewing a seat map refreshes it so the new seats show as booked
+            io.emit('bookingConfirm', { message: 'Booking Confirmed' });
+
           } catch (error) {
             console.error(error);
-            
+            socket.emit('bookingFailed', { message: 'Booking failed, please contact support' });
           }
         
     })
@@ -182,17 +255,26 @@ io.on('connection', (socket) => {
 
 
 app.post('/payment', async (req, res) => {
-    const { amount, currency, receipt } = req.body;
-  
+    const { seatCount } = req.body;
+
+    // Price is decided by the server, never trusted from the client
+    if (!Number.isInteger(seatCount) || seatCount < 1) {
+      return res.status(400).json({ success: false, error: 'seatCount must be a positive integer' });
+    }
+
+    if (!razorpay) {
+      return res.status(503).json({ success: false, error: 'Payments are not configured' });
+    }
+
     try {
       const options = {
-        amount: amount * 100, // Convert amount to paise
-        currency: currency || 'INR',
-        receipt: receipt || 'receipt#1',
+        amount: seatCount * SEAT_PRICE * 100, // Convert amount to paise
+        currency: 'INR',
+        receipt: `receipt_${Date.now()}`,
       };
-  
+
       const order = await razorpay.orders.create(options);
-      res.status(200).json({ success: true, order });
+      res.status(200).json({ success: true, order, keyId: process.env.RAZORPAY_KEY_ID });
     } catch (error) {
       console.error('Error creating Razorpay order:', error);
       res.status(500).json({ success: false, error: error.message });

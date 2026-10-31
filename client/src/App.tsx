@@ -31,6 +31,7 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path='/admin-home' element={<AdminHome />} />
       </Routes>
+      <ChatInterface />
     </Router>
   );
 }

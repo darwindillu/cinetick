@@ -3,27 +3,25 @@ const theatreCollection = require('../model/TheatreModel')
 const movieCollection = require('../model/MovieModel')
 const showCollection = require('../model/ShowModel')
 const Seat = require('../model/seatSchema')
+const { sendOTP, verifyOTP } = require('../utils/otpGenerator')
 
+const getAdminEmail = () => process.env.ADMIN_EMAIL || process.env.EMAIL
 
 // Admin Login
-const AdminLogin = (req, res) => {
+const AdminLogin = async (req, res) => {
   try {
     const { email } = req.body
-    const adminEmail = process.env.EMAIL
-    
-    console.log(adminEmail, 'This is admin Email');
-    console.log(email, 'This is user email');
-    
-    if (email !== adminEmail) {
+
+    if (!email || email !== getAdminEmail()) {
       return res.status(201).json({ message: 'Email Id is not matching' })
-    } else {
-      const otpCode = process.env.OTP
-      console.log(otpCode, 'This is the otp');
-      
-      res.status(200).json({ message: `OTP sent to ${email}`, otp: otpCode })
     }
+
+    await sendOTP(email)
+
+    res.status(200).json({ message: `OTP sent to ${email}` })
   } catch (error) {
     console.log(error);
+    res.status(500).json({ message: 'Could not send OTP, please try again' })
   }
 }
 
@@ -31,21 +29,18 @@ const AdminLogin = (req, res) => {
 const AdminVerifyOtp = (req, res) => {
   try {
     const { otp, email } = req.body
-    const existingOtp = process.env.OTP
 
-    console.log(otp, 'This is otp verify');
-    console.log(existingOtp, 'This is existing otp');
-    
-    if (otp !== existingOtp) {
-      return res.status(201).json({ message: 'Incorrect OTP' })
-    } else {
-      const accessToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRY })
-      const refreshToken = jwt.sign({ email }, process.env.REFRESH_SECRET, { expiresIn: process.env.REFRESH_EXPIRY })
-      
-      return res.status(200).json({ message: 'OTP verified successfully', AccessToken: accessToken, RefreshToken: refreshToken })
+    if (email !== getAdminEmail() || !verifyOTP(email, otp)) {
+      return res.status(201).json({ message: 'Incorrect or expired OTP' })
     }
+
+    const accessToken = jwt.sign({ email, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRY })
+    const refreshToken = jwt.sign({ email, role: 'admin' }, process.env.REFRESH_SECRET, { expiresIn: process.env.REFRESH_EXPIRY })
+
+    return res.status(200).json({ message: 'OTP verified successfully', AccessToken: accessToken, RefreshToken: refreshToken })
   } catch (error) {
     console.log(error);
+    res.status(500).json({ message: 'Could not verify OTP, please try again' })
   }
 }
 

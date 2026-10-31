@@ -5,49 +5,45 @@ const showCollection = require("../model/ShowModel");
 const theatreCollection = require("../model/TheatreModel");
 const UserCollection = require("../model/UserModel");
 const jwt = require('jsonwebtoken')
+const { sendOTP, verifyOTP } = require('../utils/otpGenerator')
 
+// Same flow for new and returning users: send an OTP to the email
 const UserLogin = async(req, res) => {
     try {
       const { email } = req.body
-      
-      console.log(email, 'This is user email');
 
-      const existingEmail = await UserCollection.findOne({email:email})
-
-      if(existingEmail){
-        res.status(201).json({message:'Email Already Existed'})
+      if (!email) {
+        return res.status(201).json({ message: 'Email is required' })
       }
-      
-      
-        const otpCode = process.env.OTP
-        console.log(otpCode, 'This is the otp');
-        
-        res.status(200).json({ message: `OTP sent to ${email}`, otp: otpCode })
-      
+
+      await sendOTP(email)
+
+      res.status(200).json({ message: `OTP sent to ${email}` })
     } catch (error) {
       console.log(error);
+      res.status(500).json({ message: 'Could not send OTP, please try again' })
     }
   }
-  
-  // Admin Verify OTP
-  const UserVerifyOtp = (req, res) => {
+
+  // User Verify OTP
+  const UserVerifyOtp = async (req, res) => {
     try {
       const { otp, email } = req.body
-      const existingOtp = process.env.OTP
-  
-      console.log(otp, 'This is otp verify');
-      console.log(existingOtp, 'This is existing otp');
-      
-      if (otp !== existingOtp) {
-        return res.status(201).json({ message: 'Incorrect OTP' })
-      } else {
-        const accessToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRY })
-        const refreshToken = jwt.sign({ email }, process.env.REFRESH_SECRET, { expiresIn: process.env.REFRESH_EXPIRY })
-        
-        return res.status(200).json({ message: 'OTP verified successfully', AccessToken: accessToken, RefreshToken: refreshToken })
+
+      if (!verifyOTP(email, otp)) {
+        return res.status(201).json({ message: 'Incorrect or expired OTP' })
       }
+
+      // First successful login creates the user
+      await UserCollection.updateOne({ email }, { $setOnInsert: { email } }, { upsert: true })
+
+      const accessToken = jwt.sign({ email, role: 'user' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRY })
+      const refreshToken = jwt.sign({ email, role: 'user' }, process.env.REFRESH_SECRET, { expiresIn: process.env.REFRESH_EXPIRY })
+
+      return res.status(200).json({ message: 'OTP verified successfully', AccessToken: accessToken, RefreshToken: refreshToken })
     } catch (error) {
       console.log(error);
+      res.status(500).json({ message: 'Could not verify OTP, please try again' })
     }
   }
 

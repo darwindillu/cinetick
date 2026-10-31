@@ -74,7 +74,10 @@ const Table: React.FC<TableProps> = ({ columns, data, role }) => {
         try {
 
               const response = await axios.post(`${baseUrl}api/admin/add-${role}`, dataToSubmit, {
-                headers: { 'Content-Type': 'multipart/form-data' },
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                  Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                },
               });
               console.log('Form submitted:', response.data);
         } catch (error) {

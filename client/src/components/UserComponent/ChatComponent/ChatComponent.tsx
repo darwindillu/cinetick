@@ -1,43 +1,40 @@
-import React, { useState, ChangeEvent } from "react";
+import React, { useState, ChangeEvent, KeyboardEvent } from "react";
 import axios from "axios";
+import baseUrl from "../../../utils/Url";
 
 interface Message {
-  sender: "user" | "chatgpt";
-  message: string;
+  role: "user" | "assistant";
+  content: string;
 }
 
+// Floating AI assistant that answers questions and recommends movies now showing
 const ChatInterface: React.FC = () => {
+  const [open, setOpen] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userMessage, setUserMessage] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSendMessage = async (): Promise<void> => {
-    if (!userMessage) return;
+    const text = userMessage.trim();
+    if (!text || loading) return;
 
-    // Add user message to the chat
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { sender: "user", message: userMessage },
-    ]);
-
+    const history = messages;
+    setMessages([...history, { role: "user", content: text }]);
     setLoading(true);
     setUserMessage("");
 
     try {
-      // Send user message to OpenAI
-      const response = await axios.post("http://localhost:3001/chat", { message: userMessage });
+      const response = await axios.post(`${baseUrl}chat`, { message: text, history });
 
-
-      // Add response from ChatGPT to the chat
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: "chatgpt", message: response.data.choices[0].message.content },
+        { role: "assistant", content: response.data.reply },
       ]);
     } catch (error) {
-      console.error("Error fetching response from OpenAI:", error);
+      console.error("Error fetching response from the assistant:", error);
       setMessages((prevMessages) => [
         ...prevMessages,
-        { sender: "chatgpt", message: "Sorry, I couldn't process your request." },
+        { role: "assistant", content: "Sorry, I couldn't process your request." },
       ]);
     } finally {
       setLoading(false);
@@ -48,21 +45,42 @@ const ChatInterface: React.FC = () => {
     setUserMessage(e.target.value);
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === "Enter") handleSendMessage();
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} style={styles.launcher} aria-label="Open movie assistant">
+        <i className="fa-solid fa-comments"></i>
+      </button>
+    );
+  }
+
   return (
     <div style={styles.chatContainer}>
+      <div style={styles.header}>
+        <span>CineTick Assistant</span>
+        <button onClick={() => setOpen(false)} style={styles.close} aria-label="Close assistant">×</button>
+      </div>
+
       <div style={styles.chatBox}>
+        {messages.length === 0 && (
+          <p style={styles.hint}>Ask me for a movie suggestion, e.g. "a family movie in Malayalam".</p>
+        )}
         {messages.map((msg, index) => (
           <div
             key={index}
             style={{
               ...styles.message,
-              alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
-              backgroundColor: msg.sender === "user" ? "#d3f8d3" : "#e3e3e3",
+              alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+              backgroundColor: msg.role === "user" ? "#d3f8d3" : "#e3e3e3",
             }}
           >
-            <p>{msg.message}</p>
+            <p style={{ margin: 0 }}>{msg.content}</p>
           </div>
         ))}
+        {loading && <p style={styles.hint}>Thinking…</p>}
       </div>
 
       <div style={styles.inputContainer}>
@@ -70,11 +88,12 @@ const ChatInterface: React.FC = () => {
           type="text"
           value={userMessage}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
           placeholder="Type a message"
           style={styles.input}
         />
         <button onClick={handleSendMessage} disabled={loading} style={styles.button}>
-          {loading ? "Sending..." : "Send"}
+          {loading ? "..." : "Send"}
         </button>
       </div>
     </div>
@@ -82,20 +101,60 @@ const ChatInterface: React.FC = () => {
 };
 
 const styles: Record<string, React.CSSProperties> = {
+  launcher: {
+    position: "fixed",
+    right: "24px",
+    bottom: "24px",
+    width: "56px",
+    height: "56px",
+    borderRadius: "50%",
+    border: "none",
+    backgroundColor: "#4CAF50",
+    color: "white",
+    fontSize: "22px",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+    zIndex: 1000,
+  },
   chatContainer: {
+    position: "fixed",
+    right: "24px",
+    bottom: "24px",
     display: "flex",
     flexDirection: "column",
-    height: "400px",
-    width: "300px",
+    height: "420px",
+    width: "320px",
     border: "1px solid #ccc",
     borderRadius: "8px",
     padding: "10px",
     backgroundColor: "#f9f9f9",
+    color: "#222",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.3)",
+    zIndex: 1000,
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontWeight: 600,
+    marginBottom: "8px",
+  },
+  close: {
+    border: "none",
+    background: "transparent",
+    fontSize: "20px",
+    cursor: "pointer",
   },
   chatBox: {
     flex: 1,
     overflowY: "auto",
     marginBottom: "10px",
+    display: "flex",
+    flexDirection: "column",
+  },
+  hint: {
+    color: "#777",
+    fontSize: "13px",
   },
   message: {
     padding: "8px",

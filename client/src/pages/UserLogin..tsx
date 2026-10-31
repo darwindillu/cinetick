@@ -63,8 +63,8 @@ const UserLoginPage = () => {
     if (!otp) {
       setOtpError('OTP is required');
       return;
-    } else if (otp.length < 4) {
-      setOtpError('OTP should contain 4 digits');
+    } else if (otp.length !== 6) {
+      setOtpError('OTP should contain 6 digits');
       return;
     }
 

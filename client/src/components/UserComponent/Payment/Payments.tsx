@@ -52,27 +52,21 @@ const PaymentPage: React.FC<PaymentPageProps> = ({data,seats,socket,selectedDate
     setIsLoading(true);
     try {
 
-        const totalSeats = seats.length
-        const totalAmount = totalSeats * 150 
-      // Create a payment order
+      // The server prices the order and returns the public Razorpay key
       const response = await axios.post(`${baseUrl}payment`, {
-        amount: totalAmount, // Amount in INR
-        currency: "INR",
-        receipt: "order_receipt_1", // Optional receipt identifier
+        seatCount: seats.length,
       });
 
-      const orderId = response.data.order.id;
-
-      console.log('orderId', orderId)
+      const { order, keyId } = response.data;
 
       // Razorpay payment options
       const options: RazorpayOptions = {
-        key: "rzp_test_g9bqvvA6stff0B", // Replace with your Razorpay key
-        amount: 50000, // Amount in paise (500 INR)
-        currency: "INR",
-        name: "Test Company",
-        description: "Test Transaction",
-        order_id: orderId, // Order ID from backend
+        key: keyId,
+        amount: order.amount, // Amount in paise, set by the server
+        currency: order.currency,
+        name: "CineTick",
+        description: `${seats.length} ticket(s)`,
+        order_id: order.id, // Order ID from backend
         handler: (response) => {
           console.log("Payment success:", response);
         //   axios.post(`${baseUrl}api/user/payment`,{data,seats,response})
@@ -85,13 +79,21 @@ const PaymentPage: React.FC<PaymentPageProps> = ({data,seats,socket,selectedDate
             
         //   })
 
+          // The server verifies the payment before saving the booking
+          socket.once('bookingSuccess', () => {
+            socket.off('bookingFailed');
+            navigate('/success');
+          });
+          socket.once('bookingFailed', (result: { message: string }) => {
+            socket.off('bookingSuccess');
+            setError(result.message);
+          });
           socket.emit('bookSeats',({data,seats,response,selectedDate}))
-           navigate('/success')
         },
         prefill: {
-          name: "John Doe",
-          email: "john.doe@example.com",
-          contact: "9999999999",
+          name: "",
+          email: data.email || "",
+          contact: "",
         },
         theme: {
           color: "#F37254",
@@ -113,6 +115,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({data,seats,socket,selectedDate
       <button style={{backgroundColor:'white',color:'black',marginLeft:120}} onClick={handlePayment} disabled={isLoading}>
         Pay Now
       </button>
+      {error && <div className="text-danger mt-2">{error}</div>}
     </div>
   );
 };
